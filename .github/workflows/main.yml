@@ -1,47 +1,52 @@
-# اسم الـ Workflow (سيظهر في تبويب Actions)
+# اسم الـ Workflow
 name: CI/CD Pipeline
 
-# --- 1. التحكم بالتشغيل (Trigger) ---
-# هذا الـ workflow سيعمل مع كل push أو pull request
-# يستهدف فرع "main"
+# متى يعمل
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
-# --- 2. المهام (Jobs) ---
+# المهام
 jobs:
-  # المهمة الأولى: البناء والاختبار (Build and Test)
-  build-and-test:
-    # نوع الجهاز الذي ستعمل عليه المهمة (سيرفر Ubuntu من GitHub)
-    runs-on: ubuntu-latest
-
-    # --- 3. الخطوات (Steps) ---
+  # مهمة البناء والدفع
+  build-and-push:
+    runs-on: ubuntu-latest # سيعمل على سيرفر لينكس (أوبنتو)
     steps:
-      # الخطوة 1: سحب الكود (Checkout)
-      # يسحب الكود من المستودع إلى السيرفر المؤقت
+      
+      # 1. سحب الكود
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # الخطوة 2: إعداد بيئة Node.js
-      # يثبت Node.js (نستخدم نفس الإصدار اللي بالـ Dockerfile)
+      # 2. إعداد بيئة Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      # الخطوة 3: تثبيت الاعتماديات
+      # 3. تثبيت الاعتماديات
       - name: Install Dependencies
         run: npm install
 
-      # الخطوة 4: تشغيل الاختبارات (Testing)
-      # حالياً هو فقط يطبع رسالة (حسب package.json)
-      # لكنه خطوة ضرورية في أي pipeline حقيقي
+      # 4. تشغيل الاختبارات (الوهمية)
       - name: Run Tests
-        run: npm test
+        run: npm test # (هذا ينجح بسبب تعديلنا لـ "exit 0")
 
-      # الخطوة 5: بناء صورة الدوكر (Build Stage)
-      # هذا الأمر هو نفسه الذي شغلته محلياً
-      - name: Build Docker Image
-        run: docker build -t devops-app .
+      # --- الخطوات الجديدة ---
+
+      # 5. تسجيل الدخول إلى Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }} # يستخدم السر اللي حفظناه
+          password: ${{ secrets.DOCKERHUB_TOKEN }}    # يستخدم التوكن اللي حفظناه
+
+      # 6. بناء ودفع الصورة
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .   # استخدم المجلد الحالي للبناء
+          push: true   # ارفع الصورة (push) بعد البناء
+          # هذا هو اسم الصورة النهائي (username/repo-name:latest)
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
