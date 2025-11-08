@@ -1,0 +1,47 @@
+# اسم الـ Workflow (سيظهر في تبويب Actions)
+name: CI/CD Pipeline
+
+# --- 1. التحكم بالتشغيل (Trigger) ---
+# هذا الـ workflow سيعمل مع كل push أو pull request
+# يستهدف فرع "main"
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+# --- 2. المهام (Jobs) ---
+jobs:
+  # المهمة الأولى: البناء والاختبار (Build and Test)
+  build-and-test:
+    # نوع الجهاز الذي ستعمل عليه المهمة (سيرفر Ubuntu من GitHub)
+    runs-on: ubuntu-latest
+
+    # --- 3. الخطوات (Steps) ---
+    steps:
+      # الخطوة 1: سحب الكود (Checkout)
+      # يسحب الكود من المستودع إلى السيرفر المؤقت
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # الخطوة 2: إعداد بيئة Node.js
+      # يثبت Node.js (نستخدم نفس الإصدار اللي بالـ Dockerfile)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      # الخطوة 3: تثبيت الاعتماديات
+      - name: Install Dependencies
+        run: npm install
+
+      # الخطوة 4: تشغيل الاختبارات (Testing)
+      # حالياً هو فقط يطبع رسالة (حسب package.json)
+      # لكنه خطوة ضرورية في أي pipeline حقيقي
+      - name: Run Tests
+        run: npm test
+
+      # الخطوة 5: بناء صورة الدوكر (Build Stage)
+      # هذا الأمر هو نفسه الذي شغلته محلياً
+      - name: Build Docker Image
+        run: docker build -t devops-app .
